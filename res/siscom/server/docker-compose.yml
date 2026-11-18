@@ -1,0 +1,42 @@
+# RustDesk Server OSS (hbbs + hbbr) para rdp.sismanager.cloud
+#
+# Reemplaza al compose de /docker/rustdesk-yozy en siscom_vps conservando
+# la llave actual: el volumen se llama igual que el que ya existe
+# (rustdesk-yozy_hbbs_data), así que la llave pública NO cambia.
+#
+# Cambios respecto al compose original:
+#   - hbbs y hbbr comparten el mismo volumen -> usan el mismo par de llaves.
+#   - hbbs anuncia el relay (-r) para que los clientes sepan a dónde ir.
+#   - -k _ obliga a que los clientes tengan la llave (rechaza clientes sin ella).
+#   - imagen fijada a una versión (latest cambia sin aviso).
+#
+# Puertos (network_mode: host, abrirlos en el firewall):
+#   21115/tcp  prueba de NAT
+#   21116/tcp  rendezvous (hole punching / conexión)
+#   21116/udp  registro de ID y heartbeat
+#   21117/tcp  relay
+#   21118-21119/tcp  solo para cliente web (no se usan aquí; no abrir)
+
+services:
+  hbbs:
+    image: rustdesk/rustdesk-server:1.1.16
+    command: hbbs -r rdp.sismanager.cloud:21117 -k _
+    volumes:
+      - rustdesk_data:/root
+    network_mode: host
+    depends_on:
+      - hbbr
+    restart: unless-stopped
+
+  hbbr:
+    image: rustdesk/rustdesk-server:1.1.16
+    command: hbbr -k _
+    volumes:
+      - rustdesk_data:/root
+    network_mode: host
+    restart: unless-stopped
+
+volumes:
+  rustdesk_data:
+    # Volumen existente donde hbbs generó id_ed25519 / id_ed25519.pub
+    name: rustdesk-yozy_hbbs_data

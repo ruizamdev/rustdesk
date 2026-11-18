@@ -1,0 +1,43 @@
+# RustDesk (rdp.sismanager.cloud) detrás de Traefik.
+# Va en /srv/traefik/dynamic/ de siscom_vps (provider file con watch: se aplica solo).
+#
+# Traefik solo puede llevar la parte HTTP(S) de RustDesk: el WebSocket de hbbs/hbbr.
+#   wss://rdp.sismanager.cloud/ws/id    -> hbbs 21118
+#   wss://rdp.sismanager.cloud/ws/relay -> hbbr 21119
+# El protocolo nativo (21115-21117/tcp, 21116/udp) sigue directo al host: hbbs necesita
+# ver la IP real de cada cliente para el hole punching, y un proxy la ocultaría.
+#
+# hbbs/hbbr usan network_mode: host, así que Traefik los alcanza por el gateway de la
+# red "proxy" (172.22.0.1). El firewall del host debe permitir 172.22.0.0/16 -> 21118:21119.
+http:
+  routers:
+    rustdesk-ws-id:
+      rule: "Host(`rdp.sismanager.cloud`) && Path(`/ws/id`)"
+      entryPoints: [websecure]
+      service: rustdesk-hbbs-ws
+    rustdesk-ws-relay:
+      rule: "Host(`rdp.sismanager.cloud`) && Path(`/ws/relay`)"
+      entryPoints: [websecure]
+      service: rustdesk-hbbr-ws
+    rustdesk-root:
+      rule: "Host(`rdp.sismanager.cloud`)"
+      entryPoints: [websecure]
+      priority: 1
+      middlewares: [rustdesk-robots]
+      service: noop@internal
+
+  middlewares:
+    rustdesk-robots:
+      headers:
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+
+  services:
+    rustdesk-hbbs-ws:
+      loadBalancer:
+        servers:
+          - url: "http://172.22.0.1:21118"
+    rustdesk-hbbr-ws:
+      loadBalancer:
+        servers:
+          - url: "http://172.22.0.1:21119"
