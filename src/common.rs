@@ -2517,7 +2517,22 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
+// Pins the Siscom server so Settings -> Network shows it and it cannot be changed.
+// The values in RENDEZVOUS_SERVERS / RS_PUB_KEY alone are only a hidden fallback.
+fn siscom_server_settings() {
+    let server = config::RENDEZVOUS_SERVERS
+        .first()
+        .copied()
+        .unwrap_or_default()
+        .to_owned();
+    let mut settings = config::OVERWRITE_SETTINGS.write().unwrap();
+    settings.insert("custom-rendezvous-server".to_owned(), server.clone());
+    settings.insert("relay-server".to_owned(), server);
+    settings.insert("key".to_owned(), config::RS_PUB_KEY.to_owned());
+}
+
 pub fn load_custom_client() {
+    siscom_server_settings();
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
