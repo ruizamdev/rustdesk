@@ -1067,7 +1067,9 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 }
 
 pub fn check_software_update() {
-    if is_custom_client() {
+    // Siscom build: official releases would replace the Siscom server and branding.
+    const SISCOM_BUILD: bool = true;
+    if SISCOM_BUILD || is_custom_client() {
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);

@@ -1,0 +1,18 @@
+name: Siscom client build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [siscom]
+    paths-ignore: ["**.md"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit
+    with:
+      upload-artifact: true
+      upload-tag: "siscom"
